@@ -2,516 +2,505 @@ _____________________________________________
 ## *Author*: AAVA
 ## *Created on*: 
 ## *Description*: Gold layer Aggregated table transformation recommendations for Zoom Platform Analytics Systems
-## *Version*: 1 
+## *Version*: 1
 ## *Updated on*: 
 _____________________________________________
 
 # Gold Layer Aggregated Table Transformation Recommendations
-## Zoom Platform Analytics Systems
 
-## 1. Transformation Rules for Aggregated Tables:
+## 1. Go_Daily_Meeting_Summary Transformations
 
-### 1.1 Go_Daily_Meeting_Summary Transformations
-
-#### **Rule 1.1.1: Daily Meeting Aggregation**
-- **Description**: Aggregate meeting metrics by date and organization to provide daily operational insights
-- **Rationale**: Supports daily operational monitoring, meeting activity tracking, and provides foundation for higher-level KPIs like Meeting Success Rate and Platform Utilization
+### Rule 1.1: Daily Meeting Count Aggregation
+- **Description**: Aggregate total number of meetings per day with host segmentation
+- **Rationale**: Provides daily operational metrics for capacity planning and usage tracking
 - **SQL Example**:
 ```sql
--- Go_Daily_Meeting_Summary Transformation
-INSERT INTO Gold.Go_Daily_Meeting_Summary (
-    summary_id,
-    summary_date,
-    organization_id,
-    total_meetings,
-    total_meeting_minutes,
-    total_participants,
-    unique_hosts,
-    unique_participants,
-    average_meeting_duration,
-    average_participants_per_meeting,
-    meetings_with_recording,
-    recording_percentage,
-    average_quality_score,
-    average_engagement_score
-)
 SELECT 
-    CONCAT(DATE(m.start_time), '_', u.company) as summary_id,
-    DATE(m.start_time) as summary_date,
-    u.company as organization_id,
-    COUNT(DISTINCT m.meeting_id) as total_meetings,
-    SUM(m.duration_minutes) as total_meeting_minutes,
-    COUNT(p.participant_id) as total_participants,
-    COUNT(DISTINCT m.host_id) as unique_hosts,
-    COUNT(DISTINCT p.user_id) as unique_participants,
-    AVG(m.duration_minutes) as average_meeting_duration,
-    ROUND(COUNT(p.participant_id) * 1.0 / COUNT(DISTINCT m.meeting_id), 2) as average_participants_per_meeting,
-    COUNT(DISTINCT CASE WHEN fu.feature_name = 'Recording' THEN m.meeting_id END) as meetings_with_recording,
-    ROUND(
-        COUNT(DISTINCT CASE WHEN fu.feature_name = 'Recording' THEN m.meeting_id END) * 100.0 / 
-        COUNT(DISTINCT m.meeting_id), 2
-    ) as recording_percentage,
-    AVG(m.data_quality_score) as average_quality_score,
-    AVG(
-        CASE 
-            WHEN p.leave_time IS NOT NULL AND p.join_time IS NOT NULL 
-            THEN EXTRACT(EPOCH FROM (p.leave_time - p.join_time)) / EXTRACT(EPOCH FROM (m.end_time - m.start_time)) * 100
-            ELSE 0 
-        END
-    ) as average_engagement_score
-FROM Silver.sv_meetings m
-INNER JOIN Silver.sv_users u ON m.host_id = u.user_id
-LEFT JOIN Silver.sv_participants p ON m.meeting_id = p.meeting_id
-LEFT JOIN Silver.sv_feature_usage fu ON m.meeting_id = fu.meeting_id
-WHERE m.record_status = 'ACTIVE'
-    AND m.data_quality_score >= 0.95
-    AND DATE(m.start_time) = CURRENT_DATE - INTERVAL '1 DAY'
-GROUP BY DATE(m.start_time), u.company
-HAVING COUNT(DISTINCT m.meeting_id) > 0;
-```
-
-#### **Rule 1.1.2: Data Quality Validation for Daily Summary**
-- **Description**: Ensure aggregated data meets 95% completeness requirement and quality thresholds
-- **Rationale**: Maintains data integrity and ensures reliable reporting metrics
-- **SQL Example**:
-```sql
--- Data Quality Check for Daily Summary
-SELECT 
-    summary_date,
-    organization_id,
-    CASE 
-        WHEN total_meetings IS NULL OR total_meeting_minutes IS NULL THEN 'FAILED'
-        WHEN average_quality_score < 0.95 THEN 'QUALITY_WARNING'
-        ELSE 'PASSED'
-    END as quality_status
-FROM Gold.Go_Daily_Meeting_Summary
-WHERE summary_date = CURRENT_DATE - INTERVAL '1 DAY';
-```
-
-### 1.2 Go_Monthly_User_Activity Transformations
-
-#### **Rule 1.2.1: Monthly User Activity Aggregation**
-- **Description**: Aggregate user activity metrics by month and user to support Monthly Active Users KPI
-- **Rationale**: Enables user engagement analysis, retention tracking, and supports business intelligence reporting on user behavior patterns
-- **SQL Example**:
-```sql
--- Go_Monthly_User_Activity Transformation
-INSERT INTO Gold.Go_Monthly_User_Activity (
-    activity_id,
-    activity_month,
-    user_id,
-    organization_id,
-    meetings_hosted,
-    meetings_attended,
-    total_hosting_minutes,
-    total_attendance_minutes,
-    webinars_hosted,
-    webinars_attended,
-    recordings_created,
-    storage_used_gb,
-    unique_participants_interacted,
-    average_meeting_quality
-)
-SELECT 
-    CONCAT(DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 MONTH'), '_', u.user_id) as activity_id,
-    DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 MONTH') as activity_month,
-    u.user_id,
-    u.company as organization_id,
-    COUNT(DISTINCT m.meeting_id) as meetings_hosted,
-    COUNT(DISTINCT p.meeting_id) as meetings_attended,
-    COALESCE(SUM(m.duration_minutes), 0) as total_hosting_minutes,
-    COALESCE(SUM(
-        CASE 
-            WHEN p.leave_time IS NOT NULL AND p.join_time IS NOT NULL 
-            THEN EXTRACT(EPOCH FROM (p.leave_time - p.join_time)) / 60
-            ELSE 0 
-        END
-    ), 0) as total_attendance_minutes,
-    COUNT(DISTINCT w.webinar_id) as webinars_hosted,
-    0 as webinars_attended,
-    COUNT(DISTINCT CASE WHEN fu.feature_name = 'Recording' THEN fu.meeting_id END) as recordings_created,
-    COALESCE(SUM(
-        CASE 
-            WHEN fu.feature_name = 'Recording' 
-            THEN fu.usage_count * 0.1
-            ELSE 0 
-        END
-    ), 0) as storage_used_gb,
-    COUNT(DISTINCT p2.user_id) as unique_participants_interacted,
-    AVG(COALESCE(m.data_quality_score, p.data_quality_score)) as average_meeting_quality
-FROM Silver.sv_users u
-LEFT JOIN Silver.sv_meetings m ON u.user_id = m.host_id 
-    AND DATE_TRUNC('month', m.start_time) = DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 MONTH')
-LEFT JOIN Silver.sv_participants p ON u.user_id = p.user_id 
-    AND DATE_TRUNC('month', p.join_time) = DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 MONTH')
-LEFT JOIN Silver.sv_webinars w ON u.user_id = w.host_id 
-    AND DATE_TRUNC('month', w.start_time) = DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 MONTH')
-LEFT JOIN Silver.sv_feature_usage fu ON (m.meeting_id = fu.meeting_id OR p.meeting_id = fu.meeting_id)
-LEFT JOIN Silver.sv_participants p2 ON (m.meeting_id = p2.meeting_id OR p.meeting_id = p2.meeting_id) 
-    AND p2.user_id != u.user_id
-WHERE u.record_status = 'ACTIVE'
-GROUP BY u.user_id, u.company, DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 MONTH')
-HAVING COUNT(DISTINCT COALESCE(m.meeting_id, p.meeting_id)) > 0 
-    OR COUNT(DISTINCT w.webinar_id) > 0;
-```
-
-### 1.3 Go_Feature_Adoption_Summary Transformations
-
-#### **Rule 1.3.1: Feature Adoption Aggregation**
-- **Description**: Aggregate feature usage metrics by period, organization, and feature to calculate adoption rates
-- **Rationale**: Supports Feature Adoption Rate KPI and provides insights for product development and user training
-- **SQL Example**:
-```sql
--- Go_Feature_Adoption_Summary Transformation
-WITH feature_usage_current AS (
-    SELECT 
-        u.company as organization_id,
-        fu.feature_name,
-        SUM(fu.usage_count) as total_usage,
-        COUNT(DISTINCT COALESCE(m.host_id, p.user_id)) as unique_users
-    FROM Silver.sv_feature_usage fu
-    LEFT JOIN Silver.sv_meetings m ON fu.meeting_id = m.meeting_id
-    LEFT JOIN Silver.sv_participants p ON fu.meeting_id = p.meeting_id
-    LEFT JOIN Silver.sv_users u ON COALESCE(m.host_id, p.user_id) = u.user_id
-    WHERE DATE_TRUNC('month', fu.usage_date) = DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 MONTH')
-        AND fu.record_status = 'ACTIVE'
-    GROUP BY u.company, fu.feature_name
-),
-total_users_by_org AS (
-    SELECT 
-        company as organization_id,
-        COUNT(DISTINCT user_id) as total_org_users
-    FROM Silver.sv_users
-    WHERE record_status = 'ACTIVE'
-    GROUP BY company
-)
-INSERT INTO Gold.Go_Feature_Adoption_Summary (
-    adoption_id,
-    summary_period,
-    organization_id,
-    feature_name,
-    total_usage_count,
-    unique_users_count,
-    adoption_rate,
-    usage_trend
-)
-SELECT 
-    CONCAT(DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 MONTH'), '_', fc.organization_id, '_', fc.feature_name) as adoption_id,
-    DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 MONTH') as summary_period,
-    fc.organization_id,
-    fc.feature_name,
-    fc.total_usage as total_usage_count,
-    fc.unique_users as unique_users_count,
-    ROUND(fc.unique_users * 100.0 / tu.total_org_users, 2) as adoption_rate,
-    'NEW' as usage_trend
-FROM feature_usage_current fc
-INNER JOIN total_users_by_org tu ON fc.organization_id = tu.organization_id
-WHERE fc.total_usage > 0;
-```
-
-### 1.4 Go_Quality_Metrics_Summary Transformations
-
-#### **Rule 1.4.1: Quality Metrics Aggregation**
-- **Description**: Aggregate technical quality metrics by date and organization for platform performance monitoring
-- **Rationale**: Supports Platform Uptime and Meeting Success Rate KPIs, enables SLA monitoring and performance optimization
-- **SQL Example**:
-```sql
--- Go_Quality_Metrics_Summary Transformation
-WITH session_quality AS (
-    SELECT 
-        DATE(m.start_time) as session_date,
-        u.company as organization_id,
-        m.meeting_id,
-        m.data_quality_score,
-        p.participant_id,
-        CASE 
-            WHEN p.leave_time IS NOT NULL THEN 1
-            ELSE 0
-        END as successful_connection,
-        CASE 
-            WHEN p.leave_time IS NULL AND p.join_time IS NOT NULL THEN 1
-            ELSE 0
-        END as dropped_connection,
-        m.data_quality_score * 100 as audio_quality,
-        m.data_quality_score * 95 as video_quality,
-        m.data_quality_score * 98 as connection_stability,
-        (1 - m.data_quality_score) * 200 as latency_ms,
-        CASE 
-            WHEN m.duration_minutes >= 1 AND p.leave_time IS NOT NULL THEN 5
-            WHEN m.duration_minutes >= 1 THEN 3
-            ELSE 2
-        END as satisfaction_score
-    FROM Silver.sv_meetings m
-    INNER JOIN Silver.sv_users u ON m.host_id = u.user_id
-    LEFT JOIN Silver.sv_participants p ON m.meeting_id = p.meeting_id
-    WHERE m.record_status = 'ACTIVE'
-        AND DATE(m.start_time) = CURRENT_DATE - INTERVAL '1 DAY'
-)
-INSERT INTO Gold.Go_Quality_Metrics_Summary (
-    quality_summary_id,
-    summary_date,
-    organization_id,
-    total_sessions,
-    average_audio_quality,
-    average_video_quality,
-    average_connection_stability,
-    average_latency_ms,
-    connection_success_rate,
-    call_drop_rate,
-    user_satisfaction_score
-)
-SELECT 
-    CONCAT(session_date, '_', organization_id) as quality_summary_id,
-    session_date as summary_date,
-    organization_id,
-    COUNT(DISTINCT meeting_id) as total_sessions,
-    ROUND(AVG(audio_quality), 2) as average_audio_quality,
-    ROUND(AVG(video_quality), 2) as average_video_quality,
-    ROUND(AVG(connection_stability), 2) as average_connection_stability,
-    ROUND(AVG(latency_ms), 2) as average_latency_ms,
-    ROUND(SUM(successful_connection) * 100.0 / COUNT(participant_id), 2) as connection_success_rate,
-    ROUND(SUM(dropped_connection) * 100.0 / COUNT(participant_id), 2) as call_drop_rate,
-    ROUND(AVG(satisfaction_score), 2) as user_satisfaction_score
-FROM session_quality
-GROUP BY session_date, organization_id
-HAVING COUNT(DISTINCT meeting_id) > 0;
-```
-
-### 1.5 Go_Engagement_Summary Transformations
-
-#### **Rule 1.5.1: Engagement Metrics Aggregation**
-- **Description**: Aggregate user engagement metrics by date and organization to measure meeting effectiveness
-- **Rationale**: Measures user interaction levels, meeting effectiveness, and provides insights for improving user experience
-- **SQL Example**:
-```sql
--- Go_Engagement_Summary Transformation
-WITH engagement_metrics AS (
-    SELECT 
-        DATE(m.start_time) as meeting_date,
-        u.company as organization_id,
-        m.meeting_id,
-        COUNT(DISTINCT p.participant_id) as participant_count,
-        m.duration_minutes,
-        SUM(CASE WHEN fu.feature_name = 'Chat' THEN fu.usage_count ELSE 0 END) as chat_messages,
-        SUM(CASE WHEN fu.feature_name = 'Screen Sharing' THEN fu.usage_count ELSE 0 END) as screen_shares,
-        SUM(CASE WHEN fu.feature_name = 'Virtual Background' THEN fu.usage_count ELSE 0 END) as reactions,
-        SUM(CASE WHEN fu.feature_name = 'Whiteboard' THEN fu.usage_count ELSE 0 END) as qa_interactions,
-        SUM(CASE WHEN fu.feature_name = 'Recording' THEN fu.usage_count ELSE 0 END) as poll_responses,
-        AVG(
-            CASE 
-                WHEN p.leave_time IS NOT NULL AND p.join_time IS NOT NULL AND m.duration_minutes > 0
-                THEN (EXTRACT(EPOCH FROM (p.leave_time - p.join_time)) / 60) / m.duration_minutes * 100
-                ELSE 0 
-            END
-        ) as avg_participation_rate,
-        CASE 
-            WHEN m.duration_minutes > 0 THEN
-                LEAST(100, (
-                    SUM(CASE WHEN fu.feature_name IN ('Chat', 'Virtual Background', 'Whiteboard') THEN fu.usage_count ELSE 0 END) * 10.0 / 
-                    (COUNT(DISTINCT p.participant_id) * m.duration_minutes)
-                ) * 100)
-            ELSE 0
-        END as attention_score
-    FROM Silver.sv_meetings m
-    INNER JOIN Silver.sv_users u ON m.host_id = u.user_id
-    LEFT JOIN Silver.sv_participants p ON m.meeting_id = p.meeting_id
-    LEFT JOIN Silver.sv_feature_usage fu ON m.meeting_id = fu.meeting_id
-    WHERE m.record_status = 'ACTIVE'
-        AND DATE(m.start_time) = CURRENT_DATE - INTERVAL '1 DAY'
-        AND m.duration_minutes > 0
-    GROUP BY DATE(m.start_time), u.company, m.meeting_id, m.duration_minutes
-)
-INSERT INTO Gold.Go_Engagement_Summary (
-    engagement_id,
-    summary_date,
-    organization_id,
-    total_meetings,
-    average_participation_rate,
-    total_chat_messages,
-    screen_share_sessions,
-    total_reactions,
-    qa_interactions,
-    poll_responses,
-    average_attention_score
-)
-SELECT 
-    CONCAT(meeting_date, '_', organization_id) as engagement_id,
-    meeting_date as summary_date,
-    organization_id,
-    COUNT(meeting_id) as total_meetings,
-    ROUND(AVG(avg_participation_rate), 2) as average_participation_rate,
-    SUM(chat_messages) as total_chat_messages,
-    SUM(screen_shares) as screen_share_sessions,
-    SUM(reactions) as total_reactions,
-    SUM(qa_interactions) as qa_interactions,
-    SUM(poll_responses) as poll_responses,
-    ROUND(AVG(attention_score), 2) as average_attention_score
-FROM engagement_metrics
-GROUP BY meeting_date, organization_id
-HAVING COUNT(meeting_id) > 0;
-```
-
-## 2. Cross-Table Validation Rules
-
-#### **Rule 2.1: Data Consistency Validation**
-- **Description**: Ensure consistency across all aggregated tables for the same time periods
-- **Rationale**: Maintains data integrity and prevents discrepancies in cross-functional reporting
-- **SQL Example**:
-```sql
--- Cross-table consistency validation
-WITH daily_meeting_counts AS (
-    SELECT summary_date, organization_id, total_meetings
-    FROM Gold.Go_Daily_Meeting_Summary
-    WHERE summary_date = CURRENT_DATE - INTERVAL '1 DAY'
-),
-engagement_meeting_counts AS (
-    SELECT summary_date, organization_id, total_meetings
-    FROM Gold.Go_Engagement_Summary
-    WHERE summary_date = CURRENT_DATE - INTERVAL '1 DAY'
-)
-SELECT 
-    d.organization_id,
-    d.total_meetings as daily_summary_meetings,
-    e.total_meetings as engagement_summary_meetings,
-    CASE 
-        WHEN d.total_meetings = e.total_meetings THEN 'CONSISTENT'
-        ELSE 'INCONSISTENT'
-    END as consistency_status
-FROM daily_meeting_counts d
-FULL OUTER JOIN engagement_meeting_counts e ON d.organization_id = e.organization_id;
-```
-
-## 3. Data Lineage and Traceability
-
-### Source to Target Mapping:
-
-1. **Go_Daily_Meeting_Summary**
-   - Primary Sources: Silver.sv_meetings, Silver.sv_users, Silver.sv_participants, Silver.sv_feature_usage
-   - Key Transformations: Daily aggregation, quality scoring, engagement calculation
-
-2. **Go_Monthly_User_Activity**
-   - Primary Sources: Silver.sv_users, Silver.sv_meetings, Silver.sv_participants, Silver.sv_webinars, Silver.sv_feature_usage
-   - Key Transformations: Monthly user-level aggregation, retention calculation
-
-3. **Go_Feature_Adoption_Summary**
-   - Primary Sources: Silver.sv_feature_usage, Silver.sv_meetings, Silver.sv_participants, Silver.sv_users
-   - Key Transformations: Feature usage aggregation, adoption rate calculation
-
-4. **Go_Quality_Metrics_Summary**
-   - Primary Sources: Silver.sv_meetings, Silver.sv_participants, Silver.sv_users
-   - Key Transformations: Quality metrics derivation, SLA monitoring
-
-5. **Go_Engagement_Summary**
-   - Primary Sources: Silver.sv_meetings, Silver.sv_participants, Silver.sv_feature_usage, Silver.sv_users
-   - Key Transformations: Engagement scoring, interaction analysis
-
-## 4. Performance Optimization Guidelines
-
-#### **Rule 4.1: Incremental Processing**
-- **Description**: Implement incremental data processing for large datasets
-- **Rationale**: Optimize processing time and resource utilization
-- **SQL Example**:
-```sql
--- Incremental processing for daily summaries
-DELETE FROM Gold.Go_Daily_Meeting_Summary 
-WHERE summary_date = CURRENT_DATE - INTERVAL '1 DAY';
-
--- Insert new aggregated data for the specific date
-INSERT INTO Gold.Go_Daily_Meeting_Summary (...)
-SELECT ...
-FROM Silver.sv_meetings m
-WHERE DATE(m.start_time) = CURRENT_DATE - INTERVAL '1 DAY'
-    AND m.load_date >= CURRENT_DATE - INTERVAL '2 DAY';
-```
-
-#### **Rule 4.2: Data Quality Monitoring**
-- **Description**: Implement comprehensive data quality validation for aggregated tables
-- **Rationale**: Ensure aggregated data meets business requirements and maintains 95% completeness
-- **SQL Example**:
-```sql
--- Data quality validation
-SELECT 
-    'Go_Daily_Meeting_Summary' as table_name,
-    COUNT(*) as total_records,
-    COUNT(CASE WHEN total_meetings IS NULL THEN 1 END) as null_meetings,
-    COUNT(CASE WHEN average_quality_score < 0.95 THEN 1 END) as low_quality_records,
-    ROUND(COUNT(CASE WHEN total_meetings IS NOT NULL THEN 1 END) * 100.0 / COUNT(*), 2) as completeness_rate
-FROM Gold.Go_Daily_Meeting_Summary
-WHERE summary_date = CURRENT_DATE - INTERVAL '1 DAY';
-```
-
-## 5. Error Handling and Exception Management
-
-#### **Rule 5.1: Safe Division Function**
-- **Description**: Handle division by zero and null values in aggregation calculations
-- **Rationale**: Ensure robust processing and prevent calculation errors
-- **SQL Example**:
-```sql
--- Safe division function for aggregations
-CREATE OR REPLACE FUNCTION safe_divide(numerator NUMERIC, denominator NUMERIC)
-RETURNS NUMERIC AS $$
-BEGIN
-    IF denominator = 0 OR denominator IS NULL THEN
-        RETURN 0;
-    ELSE
-        RETURN numerator / denominator;
-    END IF;
-EXCEPTION
-    WHEN OTHERS THEN
-        RETURN 0;
-END;
-$$ LANGUAGE plpgsql;
-
--- Usage in aggregation queries
-SELECT 
-    organization_id,
-    safe_divide(SUM(total_meeting_minutes), COUNT(total_meetings)) as avg_meeting_duration
-FROM Gold.Go_Daily_Meeting_Summary
-GROUP BY organization_id;
-```
-
-## 6. Business Rules Implementation
-
-#### **Rule 6.1: Meeting Duration Validation**
-- **Description**: Ensure meeting duration calculations are accurate within ±1 second requirement
-- **Rationale**: Maintains data accuracy standards and business rule compliance
-- **SQL Example**:
-```sql
--- Meeting duration validation
-SELECT 
-    meeting_id,
-    duration_minutes,
-    EXTRACT(EPOCH FROM (end_time - start_time)) / 60 as calculated_duration,
-    ABS(duration_minutes - EXTRACT(EPOCH FROM (end_time - start_time)) / 60) as duration_difference
-FROM Silver.sv_meetings
-WHERE ABS(duration_minutes - EXTRACT(EPOCH FROM (end_time - start_time)) / 60) > 0.0167 -- More than 1 second difference
-    AND record_status = 'ACTIVE';
-```
-
-#### **Rule 6.2: Participant Count Validation**
-- **Description**: Ensure 100% participant count accuracy and validate against business limits
-- **Rationale**: Maintains data integrity and enforces business constraints (max 1000 participants for enterprise)
-- **SQL Example**:
-```sql
--- Participant count validation
-SELECT 
-    m.meeting_id,
-    m.host_id,
+    DATE(start_time) as meeting_date,
     u.plan_type,
-    COUNT(p.participant_id) as actual_participants,
-    CASE 
-        WHEN u.plan_type = 'Enterprise' AND COUNT(p.participant_id) > 1000 THEN 'EXCEEDS_ENTERPRISE_LIMIT'
-        WHEN u.plan_type = 'Basic' AND COUNT(p.participant_id) > 100 THEN 'EXCEEDS_BASIC_LIMIT'
-        ELSE 'WITHIN_LIMITS'
-    END as validation_status
-FROM Silver.sv_meetings m
-INNER JOIN Silver.sv_users u ON m.host_id = u.user_id
-LEFT JOIN Silver.sv_participants p ON m.meeting_id = p.meeting_id
-WHERE m.record_status = 'ACTIVE'
-GROUP BY m.meeting_id, m.host_id, u.plan_type
-HAVING COUNT(p.participant_id) > CASE 
-    WHEN u.plan_type = 'Enterprise' THEN 1000
-    WHEN u.plan_type = 'Basic' THEN 100
-    ELSE 500
-END;
+    u.company,
+    COUNT(DISTINCT m.meeting_id) as total_meetings,
+    COUNT(DISTINCT m.host_id) as unique_hosts,
+    SUM(m.duration_minutes) as total_duration_minutes,
+    AVG(m.duration_minutes) as avg_meeting_duration,
+    MIN(m.duration_minutes) as min_meeting_duration,
+    MAX(m.duration_minutes) as max_meeting_duration
+FROM sv_meetings m
+JOIN sv_users u ON m.host_id = u.user_id
+WHERE DATE(start_time) = CURRENT_DATE - INTERVAL 1 DAY
+GROUP BY DATE(start_time), u.plan_type, u.company
 ```
+
+### Rule 1.2: Daily Participant Engagement Metrics
+- **Description**: Calculate daily participant engagement statistics
+- **Rationale**: Measures meeting effectiveness and user engagement patterns
+- **SQL Example**:
+```sql
+SELECT 
+    DATE(m.start_time) as meeting_date,
+    COUNT(DISTINCT p.participant_id) as total_participants,
+    COUNT(DISTINCT p.meeting_id) as meetings_with_participants,
+    AVG(TIMESTAMPDIFF(SECOND, p.join_time, p.leave_time)) as avg_participation_duration_seconds,
+    SUM(CASE WHEN TIMESTAMPDIFF(SECOND, p.join_time, p.leave_time) >= m.duration_minutes * 60 * 0.8 
+             THEN 1 ELSE 0 END) as highly_engaged_participants,
+    ROUND(AVG(TIMESTAMPDIFF(SECOND, p.join_time, p.leave_time) / (m.duration_minutes * 60.0)) * 100, 2) as avg_meeting_utilization_pct
+FROM sv_meetings m
+JOIN sv_participants p ON m.meeting_id = p.meeting_id
+WHERE DATE(m.start_time) = CURRENT_DATE - INTERVAL 1 DAY
+GROUP BY DATE(m.start_time)
+```
+
+### Rule 1.3: Peak Usage Time Analysis
+- **Description**: Identify peak concurrent meeting times during business hours
+- **Rationale**: Supports infrastructure planning and resource allocation
+- **SQL Example**:
+```sql
+WITH hourly_meetings AS (
+    SELECT 
+        DATE(start_time) as meeting_date,
+        HOUR(start_time) as meeting_hour,
+        COUNT(DISTINCT meeting_id) as concurrent_meetings,
+        SUM(COALESCE(participant_count.total_participants, 0)) as total_concurrent_participants
+    FROM sv_meetings m
+    LEFT JOIN (
+        SELECT meeting_id, COUNT(DISTINCT participant_id) as total_participants
+        FROM sv_participants 
+        GROUP BY meeting_id
+    ) participant_count ON m.meeting_id = participant_count.meeting_id
+    WHERE HOUR(start_time) BETWEEN 8 AND 18  -- Business hours
+    GROUP BY DATE(start_time), HOUR(start_time)
+)
+SELECT 
+    meeting_date,
+    MAX(concurrent_meetings) as peak_concurrent_meetings,
+    MAX(total_concurrent_participants) as peak_concurrent_participants,
+    AVG(concurrent_meetings) as avg_hourly_meetings
+FROM hourly_meetings
+GROUP BY meeting_date
+```
+
+## 2. Go_Monthly_User_Activity Transformations
+
+### Rule 2.1: Monthly Active User Calculation
+- **Description**: Calculate monthly active users with activity segmentation
+- **Rationale**: Tracks user engagement trends and platform adoption
+- **SQL Example**:
+```sql
+SELECT 
+    DATE_FORMAT(activity_month, '%Y-%m') as activity_month,
+    u.plan_type,
+    u.company,
+    COUNT(DISTINCT u.user_id) as monthly_active_users,
+    COUNT(DISTINCT CASE WHEN meeting_count >= 5 THEN u.user_id END) as power_users,
+    COUNT(DISTINCT CASE WHEN meeting_count = 1 THEN u.user_id END) as single_meeting_users,
+    AVG(meeting_count) as avg_meetings_per_user,
+    AVG(total_meeting_duration) as avg_duration_per_user,
+    SUM(total_meeting_duration) as total_platform_usage_minutes
+FROM (
+    SELECT 
+        DATE_FORMAT(start_time, '%Y-%m-01') as activity_month,
+        host_id as user_id,
+        COUNT(DISTINCT meeting_id) as meeting_count,
+        SUM(duration_minutes) as total_meeting_duration
+    FROM sv_meetings
+    WHERE start_time >= DATE_SUB(CURRENT_DATE, INTERVAL 1 MONTH)
+    GROUP BY DATE_FORMAT(start_time, '%Y-%m-01'), host_id
+) user_activity
+JOIN sv_users u ON user_activity.user_id = u.user_id
+GROUP BY DATE_FORMAT(activity_month, '%Y-%m'), u.plan_type, u.company
+```
+
+### Rule 2.2: User Engagement Score Calculation
+- **Description**: Calculate comprehensive user engagement scores
+- **Rationale**: Provides holistic view of user platform utilization and value realization
+- **SQL Example**:
+```sql
+WITH user_metrics AS (
+    SELECT 
+        u.user_id,
+        u.plan_type,
+        DATE_FORMAT(m.start_time, '%Y-%m-01') as activity_month,
+        COUNT(DISTINCT m.meeting_id) as meetings_hosted,
+        AVG(m.duration_minutes) as avg_meeting_duration,
+        COUNT(DISTINCT p.meeting_id) as meetings_participated,
+        COUNT(DISTINCT f.feature_name) as unique_features_used,
+        SUM(f.usage_count) as total_feature_usage
+    FROM sv_users u
+    LEFT JOIN sv_meetings m ON u.user_id = m.host_id
+    LEFT JOIN sv_participants p ON u.user_id = p.user_id
+    LEFT JOIN sv_feature_usage f ON m.meeting_id = f.meeting_id
+    WHERE m.start_time >= DATE_SUB(CURRENT_DATE, INTERVAL 1 MONTH)
+    GROUP BY u.user_id, u.plan_type, DATE_FORMAT(m.start_time, '%Y-%m-01')
+)
+SELECT 
+    activity_month,
+    plan_type,
+    user_id,
+    meetings_hosted,
+    meetings_participated,
+    unique_features_used,
+    total_feature_usage,
+    ROUND(
+        (COALESCE(meetings_hosted, 0) * 0.4 + 
+         COALESCE(meetings_participated, 0) * 0.3 + 
+         COALESCE(unique_features_used, 0) * 0.2 + 
+         LEAST(COALESCE(total_feature_usage, 0) / 10.0, 10) * 0.1), 2
+    ) as engagement_score
+FROM user_metrics
+```
+
+## 3. Go_Feature_Adoption_Summary Transformations
+
+### Rule 3.1: Feature Usage Aggregation
+- **Description**: Aggregate feature usage patterns across user segments
+- **Rationale**: Identifies popular features and adoption trends for product development
+- **SQL Example**:
+```sql
+SELECT 
+    DATE_FORMAT(f.usage_date, '%Y-%m') as usage_month,
+    f.feature_name,
+    u.plan_type,
+    COUNT(DISTINCT f.meeting_id) as meetings_using_feature,
+    COUNT(DISTINCT m.host_id) as unique_users_using_feature,
+    SUM(f.usage_count) as total_feature_usage,
+    AVG(f.usage_count) as avg_usage_per_meeting,
+    ROUND(
+        COUNT(DISTINCT f.meeting_id) * 100.0 / 
+        COUNT(DISTINCT m.meeting_id), 2
+    ) as feature_adoption_rate_pct
+FROM sv_feature_usage f
+JOIN sv_meetings m ON f.meeting_id = m.meeting_id
+JOIN sv_users u ON m.host_id = u.user_id
+WHERE f.usage_date >= DATE_SUB(CURRENT_DATE, INTERVAL 1 MONTH)
+GROUP BY DATE_FORMAT(f.usage_date, '%Y-%m'), f.feature_name, u.plan_type
+ORDER BY usage_month DESC, total_feature_usage DESC
+```
+
+### Rule 3.2: Feature Correlation Analysis
+- **Description**: Analyze feature co-usage patterns
+- **Rationale**: Identifies feature bundles and user behavior patterns for cross-selling
+- **SQL Example**:
+```sql
+WITH feature_combinations AS (
+    SELECT 
+        f1.meeting_id,
+        f1.feature_name as feature_1,
+        f2.feature_name as feature_2,
+        DATE_FORMAT(f1.usage_date, '%Y-%m') as usage_month
+    FROM sv_feature_usage f1
+    JOIN sv_feature_usage f2 ON f1.meeting_id = f2.meeting_id 
+                             AND f1.feature_name < f2.feature_name
+    WHERE f1.usage_date >= DATE_SUB(CURRENT_DATE, INTERVAL 1 MONTH)
+)
+SELECT 
+    usage_month,
+    feature_1,
+    feature_2,
+    COUNT(DISTINCT meeting_id) as co_usage_count,
+    ROUND(
+        COUNT(DISTINCT meeting_id) * 100.0 / 
+        (SELECT COUNT(DISTINCT meeting_id) FROM sv_feature_usage 
+         WHERE usage_date >= DATE_SUB(CURRENT_DATE, INTERVAL 1 MONTH)), 2
+    ) as co_usage_rate_pct
+FROM feature_combinations
+GROUP BY usage_month, feature_1, feature_2
+HAVING co_usage_count >= 10
+ORDER BY usage_month DESC, co_usage_count DESC
+```
+
+## 4. Go_Quality_Metrics_Summary Transformations
+
+### Rule 4.1: Meeting Quality Aggregation
+- **Description**: Aggregate meeting quality metrics with statistical measures
+- **Rationale**: Monitors platform performance and user experience quality
+- **SQL Example**:
+```sql
+WITH meeting_quality AS (
+    SELECT 
+        m.meeting_id,
+        DATE(m.start_time) as meeting_date,
+        u.plan_type,
+        m.duration_minutes,
+        COUNT(DISTINCT p.participant_id) as participant_count,
+        AVG(TIMESTAMPDIFF(SECOND, p.join_time, p.leave_time)) as avg_participation_duration,
+        -- Quality score based on participation retention
+        ROUND(AVG(
+            TIMESTAMPDIFF(SECOND, p.join_time, p.leave_time) / 
+            (m.duration_minutes * 60.0)
+        ) * 100, 2) as meeting_quality_score
+    FROM sv_meetings m
+    JOIN sv_users u ON m.host_id = u.user_id
+    LEFT JOIN sv_participants p ON m.meeting_id = p.meeting_id
+    GROUP BY m.meeting_id, DATE(m.start_time), u.plan_type, m.duration_minutes
+)
+SELECT 
+    meeting_date,
+    plan_type,
+    COUNT(DISTINCT meeting_id) as total_meetings,
+    AVG(meeting_quality_score) as avg_quality_score,
+    PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY meeting_quality_score) as median_quality_score,
+    MIN(meeting_quality_score) as min_quality_score,
+    MAX(meeting_quality_score) as max_quality_score,
+    COUNT(CASE WHEN meeting_quality_score >= 80 THEN 1 END) as high_quality_meetings,
+    ROUND(
+        COUNT(CASE WHEN meeting_quality_score >= 80 THEN 1 END) * 100.0 / 
+        COUNT(DISTINCT meeting_id), 2
+    ) as high_quality_meeting_rate_pct
+FROM meeting_quality
+WHERE meeting_date >= DATE_SUB(CURRENT_DATE, INTERVAL 7 DAYS)
+GROUP BY meeting_date, plan_type
+ORDER BY meeting_date DESC
+```
+
+### Rule 4.2: Support Ticket Quality Correlation
+- **Description**: Correlate support tickets with meeting quality metrics
+- **Rationale**: Identifies quality issues that impact user satisfaction
+- **SQL Example**:
+```sql
+SELECT 
+    DATE_FORMAT(st.open_date, '%Y-%m') as ticket_month,
+    st.ticket_type,
+    u.plan_type,
+    COUNT(DISTINCT st.ticket_id) as total_tickets,
+    COUNT(DISTINCT st.user_id) as affected_users,
+    AVG(CASE WHEN st.resolution_status = 'Resolved' THEN 1 ELSE 0 END) as resolution_rate,
+    -- Correlate with meeting activity
+    AVG(user_meetings.meeting_count) as avg_meetings_per_affected_user,
+    AVG(user_meetings.avg_duration) as avg_meeting_duration_affected_users
+FROM sv_support_tickets st
+JOIN sv_users u ON st.user_id = u.user_id
+LEFT JOIN (
+    SELECT 
+        host_id as user_id,
+        COUNT(DISTINCT meeting_id) as meeting_count,
+        AVG(duration_minutes) as avg_duration
+    FROM sv_meetings
+    WHERE start_time >= DATE_SUB(CURRENT_DATE, INTERVAL 1 MONTH)
+    GROUP BY host_id
+) user_meetings ON st.user_id = user_meetings.user_id
+WHERE st.open_date >= DATE_SUB(CURRENT_DATE, INTERVAL 1 MONTH)
+GROUP BY DATE_FORMAT(st.open_date, '%Y-%m'), st.ticket_type, u.plan_type
+ORDER BY ticket_month DESC, total_tickets DESC
+```
+
+## 5. Go_Engagement_Summary Transformations
+
+### Rule 5.1: Comprehensive Engagement Metrics
+- **Description**: Calculate multi-dimensional engagement metrics
+- **Rationale**: Provides holistic view of user engagement across all platform touchpoints
+- **SQL Example**:
+```sql
+WITH user_engagement AS (
+    SELECT 
+        u.user_id,
+        u.plan_type,
+        u.company,
+        DATE_FORMAT(CURRENT_DATE, '%Y-%m') as engagement_month,
+        -- Meeting engagement
+        COALESCE(meeting_metrics.meetings_hosted, 0) as meetings_hosted,
+        COALESCE(meeting_metrics.total_meeting_duration, 0) as total_meeting_duration,
+        COALESCE(meeting_metrics.avg_participants, 0) as avg_participants_per_meeting,
+        -- Participation engagement
+        COALESCE(participation_metrics.meetings_participated, 0) as meetings_participated,
+        COALESCE(participation_metrics.total_participation_duration, 0) as total_participation_duration,
+        -- Feature engagement
+        COALESCE(feature_metrics.unique_features_used, 0) as unique_features_used,
+        COALESCE(feature_metrics.total_feature_usage, 0) as total_feature_usage,
+        -- Webinar engagement
+        COALESCE(webinar_metrics.webinars_hosted, 0) as webinars_hosted,
+        COALESCE(webinar_metrics.total_registrants, 0) as total_webinar_registrants
+    FROM sv_users u
+    LEFT JOIN (
+        SELECT 
+            host_id as user_id,
+            COUNT(DISTINCT meeting_id) as meetings_hosted,
+            SUM(duration_minutes) as total_meeting_duration,
+            AVG(participant_count.total_participants) as avg_participants
+        FROM sv_meetings m
+        LEFT JOIN (
+            SELECT meeting_id, COUNT(DISTINCT participant_id) as total_participants
+            FROM sv_participants GROUP BY meeting_id
+        ) participant_count ON m.meeting_id = participant_count.meeting_id
+        WHERE start_time >= DATE_SUB(CURRENT_DATE, INTERVAL 1 MONTH)
+        GROUP BY host_id
+    ) meeting_metrics ON u.user_id = meeting_metrics.user_id
+    LEFT JOIN (
+        SELECT 
+            user_id,
+            COUNT(DISTINCT meeting_id) as meetings_participated,
+            SUM(TIMESTAMPDIFF(SECOND, join_time, leave_time)) as total_participation_duration
+        FROM sv_participants
+        WHERE join_time >= DATE_SUB(CURRENT_DATE, INTERVAL 1 MONTH)
+        GROUP BY user_id
+    ) participation_metrics ON u.user_id = participation_metrics.user_id
+    LEFT JOIN (
+        SELECT 
+            m.host_id as user_id,
+            COUNT(DISTINCT f.feature_name) as unique_features_used,
+            SUM(f.usage_count) as total_feature_usage
+        FROM sv_feature_usage f
+        JOIN sv_meetings m ON f.meeting_id = m.meeting_id
+        WHERE f.usage_date >= DATE_SUB(CURRENT_DATE, INTERVAL 1 MONTH)
+        GROUP BY m.host_id
+    ) feature_metrics ON u.user_id = feature_metrics.user_id
+    LEFT JOIN (
+        SELECT 
+            host_id as user_id,
+            COUNT(DISTINCT webinar_id) as webinars_hosted,
+            SUM(registrants) as total_registrants
+        FROM sv_webinars
+        WHERE start_time >= DATE_SUB(CURRENT_DATE, INTERVAL 1 MONTH)
+        GROUP BY host_id
+    ) webinar_metrics ON u.user_id = webinar_metrics.user_id
+)
+SELECT 
+    engagement_month,
+    plan_type,
+    company,
+    COUNT(DISTINCT user_id) as total_users,
+    -- Engagement segmentation
+    COUNT(DISTINCT CASE WHEN meetings_hosted > 0 OR meetings_participated > 0 THEN user_id END) as active_users,
+    COUNT(DISTINCT CASE WHEN meetings_hosted >= 5 OR meetings_participated >= 10 THEN user_id END) as highly_engaged_users,
+    COUNT(DISTINCT CASE WHEN unique_features_used >= 3 THEN user_id END) as feature_adopters,
+    COUNT(DISTINCT CASE WHEN webinars_hosted > 0 THEN user_id END) as webinar_hosts,
+    -- Average metrics
+    AVG(meetings_hosted) as avg_meetings_hosted,
+    AVG(meetings_participated) as avg_meetings_participated,
+    AVG(total_meeting_duration) as avg_meeting_duration_minutes,
+    AVG(unique_features_used) as avg_unique_features_used,
+    -- Engagement score calculation
+    AVG(
+        LEAST(meetings_hosted * 2, 20) + 
+        LEAST(meetings_participated, 10) + 
+        LEAST(unique_features_used * 3, 15) + 
+        LEAST(webinars_hosted * 5, 10)
+    ) as avg_engagement_score
+FROM user_engagement
+GROUP BY engagement_month, plan_type, company
+ORDER BY engagement_month DESC, avg_engagement_score DESC
+```
+
+### Rule 5.2: Engagement Trend Analysis
+- **Description**: Calculate month-over-month engagement trends
+- **Rationale**: Identifies engagement patterns and user lifecycle stages
+- **SQL Example**:
+```sql
+WITH monthly_engagement AS (
+    SELECT 
+        DATE_FORMAT(activity_date, '%Y-%m') as activity_month,
+        u.plan_type,
+        COUNT(DISTINCT u.user_id) as active_users,
+        AVG(daily_metrics.daily_meetings) as avg_daily_meetings,
+        AVG(daily_metrics.daily_participants) as avg_daily_participants
+    FROM (
+        SELECT 
+            DATE(start_time) as activity_date,
+            host_id,
+            COUNT(DISTINCT meeting_id) as daily_meetings,
+            SUM(participant_count.total_participants) as daily_participants
+        FROM sv_meetings m
+        LEFT JOIN (
+            SELECT meeting_id, COUNT(DISTINCT participant_id) as total_participants
+            FROM sv_participants GROUP BY meeting_id
+        ) participant_count ON m.meeting_id = participant_count.meeting_id
+        WHERE start_time >= DATE_SUB(CURRENT_DATE, INTERVAL 3 MONTH)
+        GROUP BY DATE(start_time), host_id
+    ) daily_metrics
+    JOIN sv_users u ON daily_metrics.host_id = u.user_id
+    GROUP BY DATE_FORMAT(activity_date, '%Y-%m'), u.plan_type
+),
+trend_analysis AS (
+    SELECT 
+        activity_month,
+        plan_type,
+        active_users,
+        avg_daily_meetings,
+        avg_daily_participants,
+        LAG(active_users, 1) OVER (PARTITION BY plan_type ORDER BY activity_month) as prev_month_users,
+        LAG(avg_daily_meetings, 1) OVER (PARTITION BY plan_type ORDER BY activity_month) as prev_month_meetings
+    FROM monthly_engagement
+)
+SELECT 
+    activity_month,
+    plan_type,
+    active_users,
+    prev_month_users,
+    ROUND(
+        CASE WHEN prev_month_users > 0 
+             THEN ((active_users - prev_month_users) * 100.0 / prev_month_users)
+             ELSE 0 END, 2
+    ) as user_growth_rate_pct,
+    avg_daily_meetings,
+    prev_month_meetings,
+    ROUND(
+        CASE WHEN prev_month_meetings > 0 
+             THEN ((avg_daily_meetings - prev_month_meetings) * 100.0 / prev_month_meetings)
+             ELSE 0 END, 2
+    ) as meeting_growth_rate_pct,
+    avg_daily_participants
+FROM trend_analysis
+WHERE prev_month_users IS NOT NULL
+ORDER BY activity_month DESC, plan_type
+```
+
+## Data Quality and Validation Rules
+
+### Rule DQ.1: Data Consistency Validation
+- **Description**: Ensure aggregated data maintains consistency with source tables
+- **Rationale**: Maintains data integrity and trust in analytical outputs
+- **SQL Example**:
+```sql
+-- Validation query to ensure meeting counts match between Silver and Gold layers
+SELECT 
+    'Meeting Count Validation' as validation_type,
+    silver_count,
+    gold_count,
+    CASE WHEN silver_count = gold_count THEN 'PASS' ELSE 'FAIL' END as validation_status
+FROM (
+    SELECT COUNT(DISTINCT meeting_id) as silver_count
+    FROM sv_meetings 
+    WHERE DATE(start_time) = CURRENT_DATE - INTERVAL 1 DAY
+) silver
+CROSS JOIN (
+    SELECT SUM(total_meetings) as gold_count
+    FROM Go_Daily_Meeting_Summary 
+    WHERE meeting_date = CURRENT_DATE - INTERVAL 1 DAY
+) gold
+```
+
+### Rule DQ.2: Timestamp Format Validation
+- **Description**: Ensure all timestamps follow ISO 8601 format
+- **Rationale**: Maintains data consistency and prevents timezone-related errors
+- **SQL Example**:
+```sql
+SELECT 
+    'Timestamp Format Validation' as validation_type,
+    COUNT(*) as total_records,
+    COUNT(CASE WHEN start_time REGEXP '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$' 
+               THEN 1 END) as valid_timestamps,
+    ROUND(
+        COUNT(CASE WHEN start_time REGEXP '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$' 
+                   THEN 1 END) * 100.0 / COUNT(*), 2
+    ) as validation_rate_pct
+FROM sv_meetings
+WHERE DATE(start_time) >= DATE_SUB(CURRENT_DATE, INTERVAL 7 DAYS)
+```
+
+## Performance Optimization Recommendations
+
+### Indexing Strategy
+- Create composite indexes on frequently joined columns: (meeting_id, start_time), (user_id, plan_type)
+- Implement partitioning on date columns for time-series data
+- Use covering indexes for aggregation queries
+
+### Query Optimization
+- Implement incremental processing for daily aggregations
+- Use materialized views for frequently accessed aggregations
+- Implement proper WHERE clause filtering to leverage partitioning
+
+### Data Retention Management
+- Implement automated archival processes for aggregated data older than 7 years
+- Use compression for historical aggregated tables
+- Implement tiered storage strategy based on data access patterns
+
+This comprehensive transformation framework ensures accurate, performant, and maintainable Gold layer aggregated tables that support robust analytical reporting for the Zoom Platform Analytics Systems.
