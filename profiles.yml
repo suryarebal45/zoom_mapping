@@ -1,0 +1,13 @@
+default:
+  target: dev
+  outputs:
+    dev:
+      type: snowflake
+      account: DPSMEHJ-XM84032   # ❌ do not include ".snowflakecomputing.com"
+      user: SURYA
+      password: Surya@12345678
+      role: SYSADMIN
+      database: ZOOM
+      warehouse: COMPUTE_WH
+      schema: SILVER
+      threads: 6

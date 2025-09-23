@@ -1,0 +1,46 @@
+{% macro log_pipeline_execution(model_name, records_processed) %}
+  INSERT INTO {{ ref('gold.go_process_audit') }} (
+    execution_id,
+    pipeline_name,
+    process_type,
+    start_time,
+    end_time,
+    status,
+    error_message,
+    records_processed,
+    records_successful,
+    records_failed,
+    processing_duration_seconds,
+    source_system,
+    target_system,
+    user_executed,
+    server_name,
+    memory_usage_mb,
+    cpu_usage_percent,
+    data_volume_gb,
+    load_date,
+    update_date
+  )
+  VALUES (
+    '{{ invocation_id }}',
+    '{{ model_name }}',
+    'AGGREGATION',
+    '{{ run_started_at }}',
+    CURRENT_TIMESTAMP(),
+    'SUCCESS',
+    NULL,
+    {{ records_processed }},
+    {{ records_processed }},
+    0,
+    DATEDIFF('second', '{{ run_started_at }}', CURRENT_TIMESTAMP()),
+    'SILVER_LAYER',
+    'GOLD_LAYER',
+    '{{ target.name }}',
+    '{{ target.name }}',
+    0,
+    0,
+    0,
+    CURRENT_DATE(),
+    CURRENT_DATE()
+  );
+{% endmacro %}

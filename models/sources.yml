@@ -1,0 +1,12 @@
+version: 2
+
+sources:
+  - name: silver
+    database: ZOOM
+    schema: SILVER
+    tables:
+      - name: sv_meetings
+      - name: sv_users
+      - name: sv_participants
+      - name: sv_feature_usage
+      - name: sv_webinars

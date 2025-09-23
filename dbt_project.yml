@@ -1,0 +1,17 @@
+name: 'Analytics'
+version: '1.0'
+
+config-version: 2
+
+
+
+model-paths: ["models"]
+target-path: "target"
+clean-targets: ["target", "dbt_modules"]
+
+models:
+  Analytics:
+    gold:
+      +materialized: incremental
+      +cluster_by: ["load_date"]
+      +on_schema_change: 'fail'
