@@ -1,9 +1,0 @@
-Agent Name,Required Changes
-Gold Layer Data Mapping Reviewer,Complete Field-Level Mapping - Provide detailed mapping specifications for all fields in the six fact tables (Go_Meeting_Facts Go_Participant_Facts Go_Webinar_Facts Go_Billing_Facts Go_Usage_Facts Go_Quality_Facts)
-Gold Layer Data Mapping Reviewer,Validation Logic Documentation - Document specific validation and cleansing steps at the field level for comprehensive review
-Gold Layer Data Mapping Reviewer,Transformation Rule Details - Include complete transformation logic for complex calculations such as engagement scores and quality metrics
-Gold Layer Data Mapping Reviewer,Error Handling Specifications - Define comprehensive error handling and data quality exception management procedures
-Gold Layer Data Mapping Reviewer,Enhanced Documentation - Include complete field-level mapping tables with all transformation validation and aggregation rules clearly specified
-Silver Data Modeler,Ensure everything is written as per source tables for precise alignment and governance
-Gold Data Modeler,Remove API cost tracking from the data model
-Gold Layer Fact Table Transformation Agent,Provide Gold layer Fact table transformation recommendations for Zoom Platform Analytics Systems ensuring accurate metrics and business KPIs
