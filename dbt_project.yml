@@ -13,5 +13,8 @@ models:
   Analytics:
     gold:
       +materialized: incremental
+      +schema: GOLD
+      +pre-hook: "{{ audit_log_start() }}"
+      +post-hook: "{{ audit_log_end() }}"
       +cluster_by: ["load_date"]
       +on_schema_change: 'fail'

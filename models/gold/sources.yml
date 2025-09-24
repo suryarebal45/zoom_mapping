@@ -1,3 +1,5 @@
+# models/sources.yml
+
 version: 2
 
 sources:
@@ -6,7 +8,8 @@ sources:
     schema: SILVER
     tables:
       - name: sv_meetings
-      - name: sv_users
       - name: sv_participants
-      - name: sv_feature_usage
+      - name: sv_users
       - name: sv_webinars
+      - name: sv_feature_usage
+      - name: sv_audit_log
