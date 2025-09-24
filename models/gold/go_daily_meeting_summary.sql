@@ -1,5 +1,3 @@
--- models/gold/go_daily_meeting_summary.sql
-
 {{ config(
     materialized='incremental',
     unique_key='summary_id',
@@ -35,23 +33,29 @@ participant_data AS (
         ON m.HOST_ID = u.USER_ID
     WHERE p.RECORD_STATUS = 'ACTIVE'
     GROUP BY 1,2
+),
+final AS (
+    SELECT
+        MD5(TO_VARCHAR(d.summary_date) || d.organization_id) AS summary_id,
+        d.summary_date,
+        d.organization_id,
+        d.total_meetings,
+        d.total_meeting_minutes,
+        p.total_participants,
+        d.unique_hosts,
+        p.unique_participants,
+        ROUND(d.total_meeting_minutes / NULLIF(d.total_meetings,0),2) AS average_meeting_duration,
+        ROUND(p.total_participants / NULLIF(d.total_meetings,0),2) AS average_participants_per_meeting,
+        CURRENT_DATE() AS load_date,
+        CURRENT_TIMESTAMP() AS update_date,
+        'Silver' AS source_system
+    FROM meeting_data d
+    LEFT JOIN participant_data p
+        ON d.summary_date = p.summary_date
+       AND d.organization_id = p.organization_id
 )
 
-SELECT
-    UUID_STRING() AS summary_id,
-    d.summary_date,
-    d.organization_id,
-    d.total_meetings,
-    d.total_meeting_minutes,
-    p.total_participants,
-    d.unique_hosts,
-    p.unique_participants,
-    ROUND(SAFE_DIVIDE(d.total_meeting_minutes, NULLIF(d.total_meetings,0)),2) AS average_meeting_duration,
-    ROUND(SAFE_DIVIDE(p.total_participants, NULLIF(d.total_meetings,0)),2) AS average_participants_per_meeting,
-    CURRENT_DATE() AS load_date,
-    CURRENT_TIMESTAMP() AS update_date,
-    'Silver' AS source_system
-FROM meeting_data d
-LEFT JOIN participant_data p
-    ON d.summary_date = p.summary_date
-   AND d.organization_id = p.organization_id
+SELECT * FROM final
+{% if is_incremental() %}
+WHERE summary_id NOT IN (SELECT summary_id FROM {{ this }})
+{% endif %}
