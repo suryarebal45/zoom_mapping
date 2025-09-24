@@ -14,7 +14,7 @@ WITH meeting_counts AS (
     FROM ZOOM.SILVER.SV_MEETINGS m
     JOIN ZOOM.SILVER.SV_USERS u
         ON m.HOST_ID = u.USER_ID
-    WHERE m.RECORD_STATUS = 'ACTIVE'
+    WHERE m.RECORD_STATUS = 'VALID'
     GROUP BY 1,2
 ),
 feature_metrics AS (
@@ -31,7 +31,7 @@ feature_metrics AS (
         ON f.MEETING_ID = m.MEETING_ID
     JOIN ZOOM.SILVER.SV_USERS u
         ON m.HOST_ID = u.USER_ID
-    WHERE f.RECORD_STATUS = 'ACTIVE'
+    WHERE f.RECORD_STATUS = 'VALID'
     GROUP BY 1,2
 ),
 participant_metrics AS (

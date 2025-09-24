@@ -18,7 +18,7 @@ WITH base AS (
         ON f.MEETING_ID = m.MEETING_ID
     JOIN ZOOM.SILVER.SV_USERS u
         ON m.HOST_ID = u.USER_ID
-    WHERE f.RECORD_STATUS = 'ACTIVE'
+    WHERE f.RECORD_STATUS = 'VALID'
     GROUP BY 1,2,3
 ),
 final AS (

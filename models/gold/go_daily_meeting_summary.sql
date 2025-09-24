@@ -16,7 +16,7 @@ WITH meeting_data AS (
     FROM ZOOM.SILVER.SV_MEETINGS m
     JOIN ZOOM.SILVER.SV_USERS u
         ON m.HOST_ID = u.USER_ID
-    WHERE m.RECORD_STATUS = 'ACTIVE' 
+    WHERE m.RECORD_STATUS = 'VALID' 
       AND COALESCE(m.DATA_QUALITY_SCORE,0) >= 0.7
     GROUP BY 1,2
 ),
@@ -31,7 +31,7 @@ participant_data AS (
         ON p.MEETING_ID = m.MEETING_ID
     JOIN ZOOM.SILVER.SV_USERS u
         ON m.HOST_ID = u.USER_ID
-    WHERE p.RECORD_STATUS = 'ACTIVE'
+    WHERE p.RECORD_STATUS = 'VALID'
     GROUP BY 1,2
 ),
 final AS (
