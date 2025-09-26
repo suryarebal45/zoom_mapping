@@ -1,14 +1,13 @@
 {{ config(
-    materialized='incremental',
+    materialized='table',
     unique_key='device_dim_id',
     schema='dim',
-    pre_hook="{{ audit_log_start('go_device_dimension') }}",
-    post_hook="{{ audit_log_end('go_device_dimension', 'SUCCESS', 0, 0, 0) }}",
+    pre_hook="{{ dim_audit_log_start('go_device_dimension') }}",
+    post_hook="{{ dim_audit_log_end('go_device_dimension', 'SUCCESS', 0, 0, 0) }}",
     cluster_by=['device_connection_id']
 ) }}
 
 WITH participant_devices AS (
-    -- Extract device info from participants (placeholders)
     SELECT DISTINCT
         participant_id,
         user_id,
@@ -19,7 +18,6 @@ WITH participant_devices AS (
     WHERE participant_id IS NOT NULL
 ),
 device_mapping AS (
-    -- Create device mapping
     SELECT 
         participant_id,
         user_id,
@@ -30,37 +28,21 @@ device_mapping AS (
     FROM participant_devices
 ),
 final AS (
-    -- Build final dimension table
-    SELECT
-        -- Surrogate key
+    SELECT 
         UUID_STRING() AS device_dim_id,
-
-        -- Device connection
         dm.device_connection_id,
-
-        -- Device attributes (placeholders for now)
         CAST(NULL AS VARCHAR(100)) AS device_type,
         CAST(NULL AS VARCHAR(100)) AS operating_system,
         CAST(NULL AS VARCHAR(50)) AS application_version,
         CAST(NULL AS VARCHAR(50)) AS network_connection_type,
         CAST(NULL AS VARCHAR(50)) AS device_category,
         CAST(NULL AS VARCHAR(50)) AS platform_family,
-
-        -- Metadata
         dm.load_date,
         dm.update_date,
         dm.source_system,
-
-        -- Audit
         CURRENT_TIMESTAMP() AS created_at,
         CURRENT_TIMESTAMP() AS updated_at,
         'PROCESSED' AS process_status
-
     FROM device_mapping dm
 )
-
 SELECT * FROM final
-
-{% if is_incremental() %}
-WHERE device_connection_id NOT IN (SELECT device_connection_id FROM {{ this }})
-{% endif %}

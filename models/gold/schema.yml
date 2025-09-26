@@ -1,0 +1,96 @@
+version: 2
+
+models:
+  - name: go_daily_meeting_summary
+    description: "Daily aggregated meeting metrics by organization"
+    columns:
+      - name: summary_id
+        tests:
+          - unique
+          - not_null
+      - name: summary_date
+        tests:
+          - not_null
+      - name: organization_id
+        tests:
+          - not_null
+      - name: total_meetings
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: "total_meetings >= 0"
+      - name: recording_percentage
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: "recording_percentage >= 0 AND recording_percentage <= 100"
+      - name: average_quality_score
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: "average_quality_score >= 0 AND average_quality_score <= 5"
+
+  - name: go_monthly_user_activity
+    description: "Monthly user activity summary"
+    columns:
+      - name: activity_id
+        tests:
+          - unique
+          - not_null
+      - name: user_id
+        tests:
+          - not_null
+          - relationships:
+              to: source('silver', 'sv_users')
+              field: user_id
+      - name: meetings_hosted
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: "meetings_hosted >= 0"
+
+  - name: go_feature_adoption_summary
+    description: "Feature adoption metrics by organization"
+    columns:
+      - name: adoption_id
+        tests:
+          - unique
+          - not_null
+      - name: feature_name
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['Recording','Chat','Screen Sharing','Reactions','Q&A','Polling','Emoji']
+      - name: adoption_rate
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: "adoption_rate >= 0 AND adoption_rate <= 100"
+
+  - name: go_quality_metrics_summary
+    description: "Quality metrics aggregated by date and organization"
+    columns:
+      - name: quality_summary_id
+        tests:
+          - unique
+          - not_null
+      - name: connection_success_rate
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: "connection_success_rate >= 0 AND connection_success_rate <= 100"
+      - name: call_drop_rate
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: "call_drop_rate >= 0 AND call_drop_rate <= 100"
+      - name: user_satisfaction_score
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: "user_satisfaction_score >= 0 AND user_satisfaction_score <= 10"
+
+  - name: go_engagement_summary
+    description: "Engagement metrics aggregated by date and organization"
+    columns:
+      - name: engagement_id
+        tests:
+          - unique
+          - not_null
+      - name: average_participation_rate
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: "average_participation_rate >= 0 AND average_participation_rate <= 100"

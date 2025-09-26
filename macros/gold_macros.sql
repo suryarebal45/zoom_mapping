@@ -1,5 +1,5 @@
 {% macro audit_log_start(model_name) %}
-  INSERT INTO ZOOM.GOLD.AUDIT_LOG (
+  INSERT INTO ZOOM.SILVER_GOLD.AUDIT_LOG (
     EXECUTION_ID,
     PIPELINE_NAME,
     START_TIME,
@@ -14,7 +14,7 @@
     CURRENT_DATE();
 {% endmacro %}
 {% macro audit_log_end(model_name, status='COMPLETED', records_processed=0, records_successful=0, records_failed=0) %}
-  UPDATE ZOOM.GOLD.AUDIT_LOG
+  UPDATE ZOOM.SILVER_GOLD.AUDIT_LOG
   SET 
     END_TIME = CURRENT_TIMESTAMP(),
     STATUS = '{{ status }}',

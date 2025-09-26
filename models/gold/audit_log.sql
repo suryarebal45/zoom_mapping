@@ -11,19 +11,20 @@ WITH base AS (
         UUID_STRING() AS execution_id,                         -- PK
         'Gold_Aggregation_Pipeline' AS pipeline_name,           -- pipeline name
         CURRENT_TIMESTAMP() AS start_time,                      -- process start
+        NULL AS end_time,                                       -- process end (updated later)
         CURRENT_TIMESTAMP() AS update_date,                     -- update timestamp
         'STARTED' AS status,                                    -- initial status
         NULL AS error_message,                                  -- error if any
-        0 AS records_processed, 
-        0 AS records_successful, 
-        0 AS records_failed, 
-        0 AS processing_duration_seconds, 
+        0::NUMBER(10,0) AS records_processed, 
+        0::NUMBER(10,0) AS records_successful, 
+        0::NUMBER(10,0) AS records_failed, 
+        0::NUMBER(10,0) AS processing_duration_seconds, 
         'Silver' AS source_system, 
         'Gold' AS target_system, 
         'Aggregation' AS process_type, 
         '{{ env_var("DBT_USER", "system") }}' AS user_executed, -- user
         '{{ env_var("DBT_SERVER", "unknown") }}' AS server_name,-- server
-        0 AS memory_usage_mb, 
+        0::NUMBER(10,0) AS memory_usage_mb, 
         CURRENT_DATE() AS load_date
 )
 

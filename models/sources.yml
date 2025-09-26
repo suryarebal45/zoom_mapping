@@ -17,3 +17,6 @@ sources:
         description: "Feature usage metrics for meetings and webinars"
       - name: sv_audit_log
         description: "Audit log capturing ETL process details"
+      - name: sv_licenses
+        description: "Zoom licenses table for each user"
+      - name: sv_billing_events

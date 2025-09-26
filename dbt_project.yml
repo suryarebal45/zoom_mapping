@@ -4,7 +4,6 @@ version: '1.0'
 config-version: 2
 
 model-paths: ["models"]
-target-path: "target"
 clean-targets: ["target", "dbt_modules"]
 
 models:
@@ -16,3 +15,18 @@ models:
       +post-hook: "{{ audit_log_end() }}"
       +cluster_by: ["load_date"]
       +on_schema_change: 'fail'
+    dim:
+      +materialized: incremental
+      +schema: DIM
+      +pre-hook: "{{ dim_audit_log_start(this.name) }}"
+      +post-hook: "{{ dim_audit_log_end(this.name, 0) }}"
+      +cluster_by: ["load_date"]
+    fact:
+      +materialized: incremental
+      +schema: FACT
+      +pre-hook: "{{ fact_audit_log_start(this.name) }}"
+      +post-hook: "{{ fact_audit_log_end(this.name, 0) }}"
+      +cluster_by: ["load_date"]
+      +on_schema_change: 'fail'
+flags:
+  require_generic_test_arguments_property: true
