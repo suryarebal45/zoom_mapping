@@ -1,0 +1,92 @@
+version: 2
+
+models:
+  - name: bz_users
+    description: Bronze layer users with data quality tests
+    tests:
+      - id_field_validation:
+          column_name: user_id
+    
+    columns:
+      - name: user_id
+        description: Unique user identifier
+        tests:
+          - not_null
+          - unique
+      - name: email
+        description: User email address
+        tests:
+          - not_null:
+              config: {severity: warn}
+        
+          - dbt_expectations.expect_column_values_to_match_regex:
+              config: {severity: warn}
+              arguments:
+                regex: '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+      - name: plan_type
+        description: Zoom plan type
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['BASIC', 'PRO', 'BUSINESS', 'ENTERPRISE', 'ENTERPRISE_PLUS']
+          
+      - name: user_name
+        description: User name
+        tests:
+          - not_null:
+              config: {severity: warn}
+          
+      - name: source_system
+        description: Source system identifier
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['Zoom']
+
+  - name: bz_meetings
+    description: Bronze layer meetings with data quality tests
+    
+    columns:
+      - name: meeting_id
+        description: Unique meeting identifier
+        tests: [not_null, unique]
+      - name: host_id
+        description: Meeting host user ID
+        tests: [not_null]
+      - name: duration_minutes
+        description: Meeting duration in minutes
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+    
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments:
+                min_value: 0
+                max_value: 1440
+      - name: meeting_topic
+        description: Meeting topic
+        
+      - name: source_system
+        description: Source system identifier
+        tests: [not_null]
+
+  - name: bz_participants
+    description: Bronze layer participants with data quality tests
+    
+    columns:
+      - name: participant_id
+        description: Unique participant identifier
+        tests: [not_null, unique]
+      - name: meeting_id
+        description: Reference to meeting
+        tests: [not_null]
+      - name: user_id
+        description: Reference to user
+        tests: [not_null]
+      - name: join_time
+        description: Participant join time
+        tests: [not_null]
+      - name: leave_time
+        description: Participant leave time
+        

@@ -5,9 +5,25 @@ config-version: 2
 
 model-paths: ["models"]
 clean-targets: ["target", "dbt_modules"]
+test-paths: ["tests"]
+
 
 models:
   Analytics:
+    bronze:
+      +materialized: table
+      +schema: BRONZE
+      +pre-hook: "{{ bz_audit_log_start() }}"
+      +post-hook: "{{ bz_audit_log_end() }}"
+      +on_schema_change: 'fail'
+    silver:
+      +schema: 'SILVER'
+      +materialized: table
+      +pre-hook:
+        - "{{ pre_audit_log() }}"
+      +post-hook:
+        - "{{ post_audit_log() }}"
+
     gold:
       +materialized: incremental
       +schema: GOLD
@@ -30,3 +46,8 @@ models:
       +on_schema_change: 'fail'
 flags:
   require_generic_test_arguments_property: true
+  
+vars:
+  source_system: 'raw'
+  max_data_age_days: 365
+  dq_score_threshold: 0.8

@@ -8,24 +8,24 @@
 
 WITH base AS (
     SELECT 
-        UUID_STRING() AS execution_id,                         -- PK
-        'Gold_Aggregation_Pipeline' AS pipeline_name,           -- pipeline name
-        CURRENT_TIMESTAMP() AS start_time,                      -- process start
-        NULL AS end_time,                                       -- process end (updated later)
-        CURRENT_TIMESTAMP() AS update_date,                     -- update timestamp
-        'STARTED' AS status,                                    -- initial status
-        NULL AS error_message,                                  -- error if any
+        UUID_STRING() AS execution_id,                         -- PK (VARCHAR)
+        'Gold_Aggregation_Pipeline'::VARCHAR AS pipeline_name, -- pipeline name
+        CURRENT_TIMESTAMP()::TIMESTAMP_LTZ AS start_time,      -- process start
+        CAST(NULL AS TIMESTAMP_LTZ) AS end_time,               -- process end (nullable)
+        CURRENT_TIMESTAMP()::TIMESTAMP_LTZ AS update_date,     -- update timestamp
+        'STARTED'::VARCHAR AS status,                          -- initial status
+        CAST(NULL AS VARCHAR) AS error_message,                -- error if any
         0::NUMBER(10,0) AS records_processed, 
         0::NUMBER(10,0) AS records_successful, 
         0::NUMBER(10,0) AS records_failed, 
         0::NUMBER(10,0) AS processing_duration_seconds, 
-        'Silver' AS source_system, 
-        'Gold' AS target_system, 
-        'Aggregation' AS process_type, 
-        '{{ env_var("DBT_USER", "system") }}' AS user_executed, -- user
-        '{{ env_var("DBT_SERVER", "unknown") }}' AS server_name,-- server
+        'Silver'::VARCHAR AS source_system, 
+        'Gold'::VARCHAR AS target_system, 
+        'Aggregation'::VARCHAR AS process_type, 
+        '{{ env_var("DBT_USER", "system") }}'::VARCHAR AS user_executed, -- user
+        '{{ env_var("DBT_SERVER", "unknown") }}'::VARCHAR AS server_name,-- server
         0::NUMBER(10,0) AS memory_usage_mb, 
-        CURRENT_DATE() AS load_date
+        CURRENT_DATE()::DATE AS load_date
 )
 
 SELECT * FROM base

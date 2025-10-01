@@ -1,90 +1,83 @@
 version: 2
 
 models:
-  - name: go_process_audit
-    description: "Gold layer process audit table for tracking DBT executions"
-    columns:
-      - name: execution_id
-        description: "Unique execution identifier"
-        tests:
-          - not_null
-          - unique
-      - name: pipeline_name
-        description: "Name of the pipeline/model"
-      - name: process_type
-        description: "Type of process"
-      - name: start_time
-        description: "Process start timestamp"
-      - name: end_time
-        description: "Process end timestamp"
-      - name: status
-        description: "Process status"
-      - name: records_processed
-        description: "Number of records processed"
-      - name: records_successful
-        description: "Number of records successfully processed"
-      - name: records_failed
-        description: "Number of failed records"
-      - name: processing_duration_seconds
-        description: "Duration of process in seconds"
-      - name: source_system
-        description: "Source system of data"
-      - name: target_system
-        description: "Target system of data"
-      - name: user_executed
-        description: "User who executed the pipeline"
-      - name: server_name
-        description: "Server where pipeline ran"
-      - name: memory_usage_mb
-        description: "Memory usage in MB"
-      - name: cpu_usage_percent
-        description: "CPU usage in percentage"
-      - name: load_date
-        description: "Load date"
-      - name: update_date
-        description: "Update date"
-
   - name: go_user_dimension
-    description: "Gold layer user dimension table"
+    description: "Gold user dimension table"
     columns:
-      - name: user_dim_id
-        description: "Surrogate key for user dimension"
+      - name: user_id
         tests:
           - not_null
           - unique
-      - name: user_id
-        description: "Business key - user identifier"
+      - name: user_name
         tests:
           - not_null
-      - name: user_name
       - name: email_address
+        tests:
+          - not_null
       - name: user_type
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['PRO', 'BASIC', 'ENTERPRISE', 'BUSINESS', 'STANDARD']
       - name: account_status
+        tests:
+          - not_null
       - name: license_type
+      - name: department_name
+      - name: job_title
+      - name: time_zone
+      - name: account_creation_date
+      - name: last_login_date
+      - name: language_preference
+      - name: phone_number
+      - name: load_date
+      - name: update_date
+      - name: source_system
+
+  - name: go_organization_dimension
+    description: "Gold organization dimension table"
+    columns:
+      - name: organization_id
+        tests:
+          - not_null
+          - unique
+      - name: organization_name
+        tests:
+          - not_null
+      - name: maximum_user_limit
+
+      - name: storage_quota_gb
+
+      - name: industry_classification
+      - name: organization_size
+      - name: primary_contact_email
+      - name: billing_address
+      - name: account_manager_name
+      - name: contract_start_date
+      - name: contract_end_date
       - name: load_date
       - name: update_date
       - name: source_system
 
   - name: go_time_dimension
-    description: "Gold layer time dimension table"
+    description: "Gold time dimension table"
     columns:
-      - name: time_dim_id
-        description: "Surrogate key for time dimension"
+      - name: date_key
         tests:
           - not_null
           - unique
-      - name: date_key
-        description: "Date key"
-        tests:
-          - not_null
       - name: year_number
       - name: quarter_number
+
       - name: month_number
+
       - name: month_name
       - name: week_number
       - name: day_of_year
       - name: day_of_month
       - name: day_of_week
+
       - name: day_name
       - name: is_weekend
       - name: is_holiday
@@ -95,25 +88,33 @@ models:
       - name: source_system
 
   - name: go_device_dimension
-    description: "Gold layer device dimension table"
+    description: "Gold device dimension table"
     columns:
-      - name: device_dim_id
-        description: "Surrogate key for device dimension"
+      - name: device_connection_id
         tests:
           - not_null
-          - unique
-      - name: device_connection_id
       - name: device_type
       - name: operating_system
-      - name: platform_family
-      - name: device_category
       - name: application_version
       - name: network_connection_type
+      - name: device_category
+      - name: platform_family
       - name: load_date
       - name: update_date
       - name: source_system
 
-  - name: go_organization_dimension
-    description: "Gold layer organization dimension table"
+  - name: go_geography_dimension
+    description: "Gold geography dimension table"
     columns:
-      - name: organizat
+      - name: geography_dim_id
+        tests:
+          - not_null
+          - unique
+      - name: country_code
+      - name: country_name
+      - name: region_name
+      - name: time_zone
+      - name: continent
+      - name: load_date
+      - name: update_date
+      - name: source_system

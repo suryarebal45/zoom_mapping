@@ -1,0 +1,11 @@
+{{ config(severity='error') }}
+
+SELECT 'SV_MEETINGS' AS TABLE_NAME, MEETING_ID AS RECORD_ID
+FROM {{ ref('sv_meetings') }}
+WHERE START_TIME >= END_TIME
+
+UNION ALL
+
+SELECT 'SV_WEBINARS' AS TABLE_NAME, WEBINAR_ID AS RECORD_ID
+FROM {{ ref('sv_webinars') }}
+WHERE START_TIME >= END_TIME

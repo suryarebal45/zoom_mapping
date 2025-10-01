@@ -1,0 +1,342 @@
+version: 2
+
+sources:
+  - name: bronze
+    description: "Bronze layer raw data from Zoom Platform Analytics Systems"
+    tables:
+      - name: bz_users
+        description: "Raw user data from source systems"
+        columns:
+          - name: user_id
+            description: "Unique identifier for users"
+          - name: user_name
+            description: "User display name"
+          - name: email
+            description: "User email address"
+          - name: company
+            description: "User company name"
+          - name: plan_type
+            description: "User subscription plan type"
+          - name: load_timestamp
+            description: "Timestamp when record was loaded"
+          - name: update_timestamp
+            description: "Timestamp when record was last updated"
+          - name: source_system
+            description: "Source system identifier"
+
+      - name: bz_meetings
+        description: "Raw meeting data from source systems"
+        columns:
+          - name: meeting_id
+            description: "Unique identifier for meetings"
+          - name: host_id
+            description: "Meeting host user identifier"
+          - name: meeting_topic
+            description: "Meeting topic or title"
+          - name: start_time
+            description: "Meeting start timestamp"
+          - name: end_time
+            description: "Meeting end timestamp"
+          - name: duration_minutes
+            description: "Meeting duration in minutes"
+
+      - name: bz_participants
+        description: "Raw participant data from source systems"
+        columns:
+          - name: participant_id
+            description: "Unique identifier for participants"
+          - name: meeting_id
+            description: "Associated meeting identifier"
+          - name: user_id
+            description: "Participant user identifier"
+          - name: join_time
+            description: "Participant join timestamp"
+          - name: leave_time
+            description: "Participant leave timestamp"
+
+      - name: bz_feature_usage
+        description: "Raw feature usage data from source systems"
+        columns:
+          - name: usage_id
+            description: "Unique identifier for usage records"
+          - name: meeting_id
+            description: "Associated meeting identifier"
+          - name: feature_name
+            description: "Name of the feature used"
+          - name: usage_count
+            description: "Number of times feature was used"
+          - name: usage_date
+            description: "Date of feature usage"
+
+      - name: bz_webinars
+        description: "Raw webinar data from source systems"
+        columns:
+          - name: webinar_id
+            description: "Unique identifier for webinars"
+          - name: host_id
+            description: "Webinar host user identifier"
+          - name: webinar_topic
+            description: "Webinar topic or title"
+          - name: start_time
+            description: "Webinar start timestamp"
+          - name: end_time
+            description: "Webinar end timestamp"
+          - name: registrants
+            description: "Number of webinar registrants"
+
+      - name: bz_support_tickets
+        description: "Raw support ticket data from source systems"
+        columns:
+          - name: ticket_id
+            description: "Unique identifier for support tickets"
+          - name: user_id
+            description: "User who created the ticket"
+          - name: ticket_type
+            description: "Type of support ticket"
+          - name: resolution_status
+            description: "Current status of the ticket"
+          - name: open_date
+            description: "Date when ticket was opened"
+
+      - name: bz_licenses
+        description: "Raw license data from source systems"
+        columns:
+          - name: license_id
+            description: "Unique identifier for licenses"
+          - name: license_type
+            description: "Type of license"
+          - name: assigned_to_user_id
+            description: "User assigned to the license"
+          - name: start_date
+            description: "License start date"
+          - name: end_date
+            description: "License end date"
+
+      - name: bz_billing_events
+        description: "Raw billing event data from source systems"
+        columns:
+          - name: event_id
+            description: "Unique identifier for billing events"
+          - name: user_id
+            description: "User associated with the billing event"
+          - name: event_type
+            description: "Type of billing event"
+          - name: amount
+            description: "Billing amount"
+          - name: event_date
+            description: "Date of billing event"
+
+
+
+models:
+  - name: sv_users
+    description: "Silver layer user data with quality validations"
+    columns:
+      - name: USER_ID
+        description: "Unique identifier for users"
+        tests:
+          - unique: { config: { severity: error } }
+          - not_null: { config: { severity: error } }
+
+      - name: USER_NAME
+        description: "Name of the user"
+        tests:
+          - not_null: { config: { severity: error } }
+          - dbt_utils.not_empty_string: { config: { severity: error } }
+
+      - name: EMAIL
+        description: "Email address of the user"
+        tests:
+          - not_null: { config: { severity: error } }
+          
+    
+
+      - name: PLAN_TYPE
+        description: "Subscription plan type"
+        tests:
+          - accepted_values:
+              values: ['BASIC', 'PRO', 'BUSINESS', 'ENTERPRISE']
+              config: { severity: warn }
+
+      - name: DATA_QUALITY_SCORE
+        description: "Data quality score between 0 and 1"
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 1
+              config: { severity: error }
+
+      - name: RECORD_STATUS
+        description: "Validation status"
+        tests:
+          - accepted_values:
+              values: ['VALID', 'WARNING', 'INVALID']
+              config: { severity: error }
+          - sv_test_valid_status_values:
+              column_name: RECORD_STATUS
+              valid_statuses: ['VALID', 'WARNING', 'INVALID']
+          
+        
+        
+
+  - name: sv_meetings
+    description: "Silver layer meetings data"
+    columns:
+      - name: MEETING_ID
+        tests:
+          - unique: { config: { severity: error } }
+          - not_null: { config: { severity: error } }
+
+      - name: START_TIME
+        tests:
+          - not_null: { config: { severity: error } }
+
+      - name: END_TIME
+        tests:
+          - not_null: { config: { severity: error } }
+
+      - name: DURATION_MINUTES
+        tests:
+          - not_null: { config: { severity: warn } }
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+              config: { severity: error }
+
+      - name: DATA_QUALITY_SCORE
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 1
+              config: { severity: error }
+
+      - name: RECORD_STATUS
+        tests:
+          - accepted_values:
+              values: ['VALID', 'WARNING', 'INVALID']
+              config: { severity: error }
+
+  - name: sv_participants
+    description: "Silver layer participant data"
+    columns:
+      - name: PARTICIPANT_ID
+        tests:
+          - unique: { config: { severity: error } }
+          - not_null: { config: { severity: error } }
+
+      - name: MEETING_ID
+        tests:
+          - not_null: { config: { severity: error } }
+
+      - name: JOIN_TIME
+        tests:
+          - not_null: { config: { severity: error } }
+
+      - name: LEAVE_TIME
+        tests:
+          - not_null: { config: { severity: error } }
+
+      - name: DATA_QUALITY_SCORE
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 1
+              config: { severity: error }
+
+      - name: RECORD_STATUS
+        tests:
+          - accepted_values:
+              values: ['VALID', 'WARNING', 'INVALID']
+              config: { severity: error }
+
+  - name: sv_webiners
+    description: "Silver layer webinar data"
+    columns:
+      - name: WEBINAR_ID
+        tests:
+          - unique: { config: { severity: error } }
+          - not_null: { config: { severity: error } }
+
+      - name: START_TIME
+        tests:
+          - not_null: { config: { severity: error } }
+
+      - name: END_TIME
+        tests:
+          - not_null: { config: { severity: error } }
+
+      - name: DURATION_MINUTES
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: "DURATION_MINUTES >= 0"
+              config: { severity: error }
+
+      - name: DATA_QUALITY_SCORE
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 1
+              config: { severity: error }
+
+      - name: RECORD_STATUS
+        tests:
+          - accepted_values:
+              values: ['VALID', 'WARNING', 'INVALID']
+              config: { severity: error }
+
+  - name: sv_feature_usage
+    description: "Silver layer feature usage logs"
+    columns:
+      - name: USAGE_ID
+        tests:
+          - unique: { config: { severity: error } }
+          - not_null: { config: { severity: error } }
+
+      - name: USAGE_DATE
+        tests:
+          - not_null: { config: { severity: error } }
+
+      - name: FEATURE_NAME
+        tests:
+          - not_null: { config: { severity: error } }
+
+      - name: DATA_QUALITY_SCORE
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 1
+              config: { severity: error }
+
+      - name: RECORD_STATUS
+        tests:
+          - accepted_values:
+              values: ['VALID', 'WARNING', 'INVALID']
+              config: { severity: error }
+
+  - name: sv_licenses
+    description: "Silver layer licenses data"
+    columns:
+      - name: LICENSE_ID
+        tests:
+          - unique: { config: { severity: error } }
+          - not_null: { config: { severity: error } }
+
+      - name: START_DATE
+        tests:
+          - not_null: { config: { severity: error } }
+
+      - name: END_DATE
+        tests:
+          - not_null: { config: { severity: error } }
+
+      - name: DATA_QUALITY_SCORE
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 1
+              config: { severity: error }
+
+      - name: RECORD_STATUS
+        tests:
+          - accepted_values:
+              values: ['VALID', 'WARNING', 'INVALID']
+              config: { severity: error }

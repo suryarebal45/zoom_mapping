@@ -1,0 +1,7 @@
+{{ config(severity='error') }}
+
+SELECT PARTICIPANT_ID, MEETING_ID, JOIN_TIME, LEAVE_TIME
+FROM {{ ref('sv_participants') }}
+WHERE JOIN_TIME IS NOT NULL 
+  AND LEAVE_TIME IS NOT NULL 
+  AND JOIN_TIME > LEAVE_TIME

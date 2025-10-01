@@ -4,93 +4,220 @@ models:
   - name: go_daily_meeting_summary
     description: "Daily aggregated meeting metrics by organization"
     columns:
-      - name: summary_id
+      - name: SUMMARY_ID
+        description: "Unique identifier for daily summary"
         tests:
           - unique
           - not_null
-      - name: summary_date
+      - name: SUMMARY_DATE
+        description: "Date of the summary"
         tests:
           - not_null
-      - name: organization_id
+      - name: ORGANIZATION_ID
+        description: "Organization identifier"
         tests:
           - not_null
-      - name: total_meetings
-        tests:
-          - not_null
-          - dbt_utils.expression_is_true:
-              expression: "total_meetings >= 0"
-      - name: recording_percentage
+      - name: TOTAL_MEETINGS
+        description: "Total number of meetings"
         tests:
           - dbt_utils.expression_is_true:
-              expression: "recording_percentage >= 0 AND recording_percentage <= 100"
-      - name: average_quality_score
+              expression: " >= 0"
+      - name: TOTAL_MEETING_MINUTES
+        description: "Total meeting minutes"
         tests:
           - dbt_utils.expression_is_true:
-              expression: "average_quality_score >= 0 AND average_quality_score <= 5"
+              expression: " >= 0"
+      - name: TOTAL_PARTICIPANTS
+        description: "Total participants in meetings"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: " >= 0"
+      - name: UNIQUE_HOSTS
+        description: "Unique hosts in meetings"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: " >= 0"
+      - name: UNIQUE_PARTICIPANTS
+        description: "Unique participants"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: " >= 0"
+      - name: AVERAGE_MEETING_DURATION
+        description: "Average meeting duration in minutes"
+          
 
-  - name: go_monthly_user_activity
-    description: "Monthly user activity summary"
+      - name: AVERAGE_PARTICIPANTS_PER_MEETING
+        description: "Average participants per meeting"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: " >= 0"
+      - name: LOAD_DATE
+        description: "Load date"
+        tests:
+          - not_null
+      - name: UPDATE_DATE
+        description: "Update timestamp"
+        tests:
+          - not_null
+      - name: SOURCE_SYSTEM
+        description: "Source system of data"
+        
+
+  - name: go_engagement_summary
+    description: "Engagement metrics by date and organization"
     columns:
-      - name: activity_id
+      - name: ENGAGEMENT_ID
+        description: "Unique identifier for engagement summary"
         tests:
           - unique
           - not_null
-      - name: user_id
+      - name: SUMMARY_DATE
+        description: "Summary date"
         tests:
           - not_null
-          - relationships:
-              to: source('silver', 'sv_users')
-              field: user_id
-      - name: meetings_hosted
+      - name: ORGANIZATION_ID
+        description: "Organization identifier"
+        tests:
+          - not_null
+      - name: TOTAL_MEETINGS
+        description: "Total meetings"
         tests:
           - dbt_utils.expression_is_true:
-              expression: "meetings_hosted >= 0"
+              expression: " >= 0"
+      - name: TOTAL_CHAT_MESSAGES
+        description: "Total chat messages"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: " >= 0"
+      - name: SCREEN_SHARE_SESSIONS
+        description: "Screen share sessions"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: " >= 0"
+      - name: TOTAL_REACTIONS
+        description: "Total reactions"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: " >= 0"
+      - name: QA_INTERACTIONS
+        description: "Q&A interactions"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: " >= 0"
+      - name: POLL_RESPONSES
+        description: "Poll responses"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: " >= 0"
+      - name: AVERAGE_ATTENTION_SCORE
+        description: "Average attention score"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: " >= 0"
+      - name: LOAD_DATE
+        description: "Load date"
+        tests:
+          - not_null
+      - name: UPDATE_DATE
+        description: "Update timestamp"
+        tests:
+          - not_null
+      - name: SOURCE_SYSTEM
+        description: "Source system of data"
+        
 
   - name: go_feature_adoption_summary
     description: "Feature adoption metrics by organization"
     columns:
-      - name: adoption_id
+      - name: ADOPTION_ID
+        description: "Unique identifier for adoption summary"
         tests:
           - unique
           - not_null
-      - name: feature_name
+      - name: SUMMARY_PERIOD
+        description: "Summary period"
         tests:
           - not_null
-          - accepted_values:
-              values: ['Recording','Chat','Screen Sharing','Reactions','Q&A','Polling','Emoji']
-      - name: adoption_rate
+      - name: ORGANIZATION_ID
+        description: "Organization identifier"
+        tests:
+          - not_null
+      - name: FEATURE_NAME
+        description: "Feature name"
+        
+      - name: TOTAL_USAGE_COUNT
+        description: "Total usage count"
         tests:
           - dbt_utils.expression_is_true:
-              expression: "adoption_rate >= 0 AND adoption_rate <= 100"
+              expression: " >= 0"
+      - name: UNIQUE_USERS_COUNT
+        description: "Unique users count"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: " >= 0"
+      - name: LOAD_DATE
+        description: "Load date"
+        tests:
+          - not_null
+      - name: UPDATE_DATE
+        description: "Update timestamp"
+        tests:
+          - not_null
+      - name: SOURCE_SYSTEM
+        description: "Source system of data"
+        
 
-  - name: go_quality_metrics_summary
-    description: "Quality metrics aggregated by date and organization"
+  - name: go_monthly_user_activity
+    description: "Monthly user activity aggregations"
     columns:
-      - name: quality_summary_id
+      - name: ACTIVITY_ID
+        description: "Unique identifier for monthly activity"
         tests:
           - unique
           - not_null
-      - name: connection_success_rate
+      - name: ACTIVITY_MONTH
+        description: "Month of activity"
         tests:
-          - dbt_utils.expression_is_true:
-              expression: "connection_success_rate >= 0 AND connection_success_rate <= 100"
-      - name: call_drop_rate
-        tests:
-          - dbt_utils.expression_is_true:
-              expression: "call_drop_rate >= 0 AND call_drop_rate <= 100"
-      - name: user_satisfaction_score
-        tests:
-          - dbt_utils.expression_is_true:
-              expression: "user_satisfaction_score >= 0 AND user_satisfaction_score <= 10"
-
-  - name: go_engagement_summary
-    description: "Engagement metrics aggregated by date and organization"
-    columns:
-      - name: engagement_id
-        tests:
-          - unique
           - not_null
-      - name: average_participation_rate
+      - name: USER_ID
+        description: "User identifier"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('sv_users')
+              field: USER_ID
+      - name: ORGANIZATION_ID
+        description: "Organization identifier"
+        tests:
+          - not_null
+      - name: MEETINGS_HOSTED
+        description: "Number of meetings hosted"
         tests:
           - dbt_utils.expression_is_true:
-              expression: "average_participation_rate >= 0 AND average_participation_rate <= 100"
+              expression: " >= 0"
+      - name: MEETINGS_ATTENDED
+        description: "Number of meetings attended"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: " >= 0"
+      - name: TOTAL_HOSTING_MINUTES
+        description: "Total hosting minutes"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: " >= 0"
+      - name: TOTAL_ATTENDANCE_MINUTES
+        description: "Total attendance minutes"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: " >= 0"
+      - name: LOAD_DATE
+        description: "Load date"
+        tests:
+          - not_null
+      - name: UPDATE_DATE
+        description: "Update timestamp"
+        tests:
+          - not_null
+      - name: SOURCE_SYSTEM
+        description: "Source system of data"
+        
