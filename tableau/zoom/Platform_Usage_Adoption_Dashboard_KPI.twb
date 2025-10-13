@@ -25,7 +25,7 @@
       <connection class='federated'>
         <named-connections>
           <named-connection caption='adinwiq-jz92441.snowflakecomputing.com' name='snowflake.13q3w531ohmp971049bi31alo5sy'>
-            <connection authentication='Username Password' class='snowflake' dbname='SNOWFLAKE_LEARNING_DB' odbc-connect-string-extras='' one-time-sql='' schema='GOLD' server='adinwiq-jz92441.snowflakecomputing.com' service='ACCOUNTADMIN' username='THEJASHWANI' warehouse='SNOWFLAKE_LEARNING_WH' />
+            <connection authentication='Username Password' class='snowflake' dbname='SNOWFLAKE_LEARNING_DB' odbc-connect-string-extras='' one-time-sql='' schema='GOLD' server='adinwiq-jz92441.snowflakecomputing.com' service='ACCOUNTADMIN' username='THEJASHWANI' password='Welcome@098765' warehouse='SNOWFLAKE_LEARNING_WH' />
           </named-connection>
         </named-connections>
         <_.fcp.ObjectModelEncapsulateLegacy.false...relation connection='snowflake.13q3w531ohmp971049bi31alo5sy' name='VW_MEETING_ANALYTICS' table='[SNOWFLAKE_LEARNING_DB].[GOLD].[VW_MEETING_ANALYTICS]' type='table' />
@@ -277,7 +277,7 @@
       <connection class='federated'>
         <named-connections>
           <named-connection caption='adinwiq-jz92441.snowflakecomputing.com' name='snowflake.13q3w531ohmp971049bi31alo5sy'>
-            <connection authentication='Username Password' class='snowflake' dbname='SNOWFLAKE_LEARNING_DB' odbc-connect-string-extras='' one-time-sql='' schema='GOLD' server='adinwiq-jz92441.snowflakecomputing.com' service='ACCOUNTADMIN' username='THEJASHWANI' warehouse='SNOWFLAKE_LEARNING_WH' />
+            <connection authentication='Username Password' class='snowflake' dbname='SNOWFLAKE_LEARNING_DB' odbc-connect-string-extras='' one-time-sql='' schema='GOLD' server='adinwiq-jz92441.snowflakecomputing.com' service='ACCOUNTADMIN' username='THEJASHWANI' password='Welcome@098765' warehouse='SNOWFLAKE_LEARNING_WH' />
           </named-connection>
         </named-connections>
         <_.fcp.ObjectModelEncapsulateLegacy.false...relation connection='snowflake.13q3w531ohmp971049bi31alo5sy' name='VW_USER_ACTIVITY' table='[SNOWFLAKE_LEARNING_DB].[GOLD].[VW_USER_ACTIVITY]' type='table' />
@@ -1109,3 +1109,4 @@
     </thumbnail>
   </thumbnails>
 </workbook>
+
