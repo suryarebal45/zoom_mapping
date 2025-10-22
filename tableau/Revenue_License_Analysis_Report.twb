@@ -25,7 +25,7 @@
       <connection class='federated'>
         <named-connections>
           <named-connection caption='cmmoeui-dh77804.snowflakecomputing.com' name='snowflake.1t3ikc509qxymk17b056f0gehr4a'>
-            <connection authentication='Username Password' class='snowflake' dbname='ZOOM' odbc-connect-string-extras='' one-time-sql='' schema='GOLD' server='cmmoeui-dh77804.snowflakecomputing.com' service='ACCOUNTADMIN' username='SATHYA' warehouse='COMPUTE_WH' />
+            <connection authentication='Username Password' class='snowflake' dbname='ZOOM' odbc-connect-string-extras='' one-time-sql='' schema='GOLD' server='cmmoeui-dh77804.snowflakecomputing.com' service='ACCOUNTADMIN' username='SATHYA' password='Sathyanarayana@20' warehouse='COMPUTE_WH' />
           </named-connection>
         </named-connections>
         <_.fcp.ObjectModelEncapsulateLegacy.false...relation connection='snowflake.1t3ikc509qxymk17b056f0gehr4a' name='GO_BILLING_FACTS' table='[ZOOM].[GOLD].[GO_BILLING_FACTS]' type='table' />
@@ -2864,3 +2864,4 @@
     </thumbnail>
   </thumbnails>
 </workbook>
+
