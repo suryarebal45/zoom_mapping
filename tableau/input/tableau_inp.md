@@ -2,7 +2,7 @@
 {
   "SNOWFLAKE_CONFIG: {
     "user": "SATHYANARAYANAP",
-    "private_key_pem":"""-----BEGIN RSA PRIVATE KEY-----
+    "private_key_str":"""-----BEGIN RSA PRIVATE KEY-----
 MIIEowIBAAKCAQEAzExrRquAsOfjWDmegmETIBAUJqBthB3chMOuXdPunTPOwro6
 Gel9ilan68wlXQLDE+aRYkBRaoqlJodyZSJ9JKH8HbsowrleHUsYN7yzGKF6dxgJ
 /sFDfZ/CkjRJdwofRFlplhOegHSRSu+wtXIG2isDUbzQWTvBYbhewVDBybUxiCb7
