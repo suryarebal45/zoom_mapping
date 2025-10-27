@@ -1,7 +1,8 @@
+
 {
-  "SNOWFLAKE_CONFIG": {
-    "snowflake_user": "SATHYANARAYANAP",
-    "snowflake_private_key":  "-----BEGIN RSA PRIVATE KEY-----
+  "SNOWFLAKE_CONFIG: {
+    "user": "SATHYANARAYANAP",
+    "private_key_pem":"""-----BEGIN RSA PRIVATE KEY-----
 MIIEowIBAAKCAQEAmICiJfmVfYiTpA9cNBBwa+6n53Y1BmEb/eIyfLts3+fl+Hpu
 ye55WA19OSmp1GQeXiuukxT31od7KrNcXpaasCZigyJ4lG5P0uj85l3t33q/AvMk
 OgJWrl+V0/UfSMZUEcWY5tDaeULoBJMGg576UGTxYohnmHuso5DkVTwa04JLtWXs
@@ -27,18 +28,14 @@ JkiEOEg6/w58d3IB6Vt3o81NLnOV6xPmFDUR5PoKxNandJJ3x6aRtIDP/gn7R7lA
 1fZBQQKBgFyC7LJjro8aAJ7zDdonvBTW4Hp0ZKOxjnPFQIp7Vp0eeUZEWgxUVUl2
 0qcaGm2vmwH6VZJwSLPnVjQ8fX8y8ZtPKOm79dfOVqe7hzq9l0wXRp88K6g1Nar0
 NzGc21bpjaUH+5jJIZqZkbOpJs+qWCULOq2gFMmqKLbVUmtspcM/
------END RSA PRIVATE KEY-----",
-    "snowflake_account": "A8977680256071-ASCENDION_PARTNER",
-    "snowflake_database": "DB_POC_ZOOM",
-    "snowflake_warehouse": "WH_POC_ZOOM_DEV_XSMALL",
-    "snowflake_schema": "UTILITY",
-    "snowflake_role": "FR__POC__ADMIN__ZOOM",
+-----END RSA PRIVATE KEY-----""",
+    "account": "A8977680256071-ASCENDION_PARTNER",
+    "database": "DB_POC_ZOOM",
+    "warehouse": "WH_POC_ZOOM_DEV_XSMALL",
+    "schema": "UTILITY",
+    "role": "FR__POC__ADMIN__ZOOM"
     "workbook_name": "Platform_Usage_Adoption_Report.twb"
   }
+
 }
-
-
-
-
-
 
