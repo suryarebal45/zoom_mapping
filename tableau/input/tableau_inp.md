@@ -34,7 +34,8 @@ NzGc21bpjaUH+5jJIZqZkbOpJs+qWCULOq2gFMmqKLbVUmtspcM/
     "warehouse": "WH_POC_ZOOM_DEV_XSMALL",
     "schema": "UTILITY",
     "role": "FR__POC__ADMIN__ZOOM"
-    "workbook_name": "Platform_Usage_Adoption_Report.twb"
+    "workbook_name": "Revenue_License_Analysis"
+    "github_workbook_url":"https://raw.githubusercontent.com/suryarebal45/zoom_mapping/refs/heads/main/tableau/output/Revenue_License_Analysis_Report.twb"
   }
 
 }
